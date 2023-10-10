@@ -1,0 +1,89 @@
+const fs = require('fs').promises;
+const Cart = require('../dao/models/Cart');
+
+class CartManager {
+  constructor() {
+    this.filePath = './data/cart.json';
+    this.initializeCurrentId();
+  }
+
+  async initializeCurrentId() {
+    try {
+      const carts = await this.getCarts();
+      const maxId = carts.reduce((max, cart) => Math.max(max, cart.id), 0);
+      this.currentId = maxId + 1;
+    } catch (error) {
+      this.currentId = 1;
+    }
+  }
+
+  // Mongoose
+  async getCartsDB() {
+    return await Cart.find();
+  }
+
+  // FileSystem
+  async getCartsFS() {
+    const data = await fs.readFile(this.filePath, 'utf-8');
+    return JSON.parse(data);
+  }
+
+  async getCarts() {
+    try {
+      return await this.getCartsDB();
+      // return await this.getCartsFS();
+    } catch (error) {
+      throw new Error('Error al obtener carritos');
+    }
+  }
+
+  async getCartById(id) {
+    try {
+      // Mongoose
+      return await Cart.findById(id);
+      
+      // FileSystem
+      // const carts = await this.getCartsFS();
+      // return carts.find(cart => cart.id === id);
+    } catch (error) {
+      throw new Error('Error al obtener carrito por ID');
+    }
+  }
+
+  async addProductToCart(cartId, productId) {
+    try {
+      // Mongoose
+      const cart = await Cart.findById(cartId);
+      if (cart) {
+        const productIndex = cart.products.findIndex(product => product.product === productId);
+        if (productIndex >= 0) {
+          cart.products[productIndex].quantity += 1;
+        } else {
+          cart.products.push({ product: productId, quantity: 1 });
+        }
+        await cart.save();
+      } else {
+        throw new Error('Carrito no encontrado');
+      }
+      
+      // FileSystem
+      // const carts = await this.getCartsFS();
+      // const cart = carts.find(cart => cart.id === cartId);
+      // if (cart) {
+      //   const productIndex = cart.products.findIndex(product => product.product === productId);
+      //   if (productIndex >= 0) {
+      //     cart.products[productIndex].quantity += 1;
+      //   } else {
+      //     cart.products.push({ product: productId, quantity: 1 });
+      //   }
+      //   await fs.writeFile(this.filePath, JSON.stringify(carts, null, 2));
+      // } else {
+      //   throw new Error('Carrito no encontrado');
+      // }
+    } catch (error) {
+      throw new Error('Error al agregar producto al carrito');
+    }
+  }
+}
+
+module.exports = CartManager;

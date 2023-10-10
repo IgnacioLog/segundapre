@@ -1,0 +1,117 @@
+const fs = require('fs').promises;
+const Product = require('../dao/models/product');
+
+class ProductManager {
+  constructor() {
+    this.filePath = './data/products.json';
+    this.initializeCurrentId();
+  }
+
+  async initializeCurrentId() {
+    try {
+      const products = await this.getProducts();
+      const maxId = products.reduce((max, product) => Math.max(max, product.id), 0);
+      this.currentId = maxId + 1;
+    } catch (error) {
+      this.currentId = 1;
+    }
+  }
+
+  // Mongoose
+  async getProductsDB() {
+    return await Product.find();
+  }
+
+  // FileSystem
+  async getProductsFS() {
+    const data = await fs.readFile(this.filePath, 'utf-8');
+    return JSON.parse(data);
+  }
+
+  async getProducts() {
+    try {
+      return await this.getProductsDB();
+      // return await this.getProductsFS();
+    } catch (error) {
+      throw new Error('Error al obtener productos');
+    }
+  }
+
+  async getProductById(id) {
+    try {
+      // Mongoose
+      return await Product.findById(id);
+      
+      // FileSystem
+      // const products = await this.getProductsFS();
+      // return products.find(product => product.id === id);
+    } catch (error) {
+      throw new Error('Error al obtener producto por ID');
+    }
+  }
+
+  async addProduct(product) {
+    try {
+      // Mongoose
+      const newProduct = new Product(product);
+      await newProduct.save();
+      
+      // FileSystem
+      // product.id = this.currentId++;
+      // const products = await this.getProductsFS();
+      // products.push(product);
+      // await fs.writeFile(this.filePath, JSON.stringify(products, null, 2));
+    } catch (error) {
+      throw new Error('Error al agregar producto');
+    }
+  }
+
+  async updateProduct(id, updatedProduct) {
+    try {
+      // Mongoose
+      await Product.findByIdAndUpdate(id, updatedProduct);
+      
+      // FileSystem
+      // const products = await this.getProductsFS();
+      // const index = products.findIndex(product => product.id === id);
+      // if (index !== -1) {
+      //   updatedProduct.id = id; // Asegurarse de que el ID no cambie
+      //   products[index] = updatedProduct;
+      //   await fs.writeFile(this.filePath, JSON.stringify(products, null, 2));
+      // } else {
+      //   throw new Error('Producto no encontrado');
+      // }
+    } catch (error) {
+      throw new Error('Error al actualizar producto: ' + error.message);
+    }
+  }
+
+  async deleteProduct(id) {
+    try {
+      // Mongoose
+      await Product.findByIdAndDelete(id);
+      
+      // FileSystem
+      // let products = await this.getProductsFS();
+      // products = products.filter(product => product.id !== id);
+      // await fs.writeFile(this.filePath, JSON.stringify(products, null, 2));
+    } catch (error) {
+      throw new Error('Error al eliminar producto: ' + error.message);
+    }
+  }
+
+  async getProductsBelowPrice(priceLimit) {
+    try {
+      // Mongoose
+      return await Product.find({ price: { $lte: priceLimit } });
+      
+      // FileSystem
+      // const products = await this.getProductsFS();
+      // return products.filter(product => product.price <= priceLimit);
+    } catch (error) {
+      throw new Error('Error al obtener productos por debajo del precio: ' + error.message);
+    }
+  }
+}
+
+module.exports = ProductManager;

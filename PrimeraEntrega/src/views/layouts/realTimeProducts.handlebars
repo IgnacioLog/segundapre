@@ -1,0 +1,68 @@
+<h1>Productos en Tiempo Real</h1>
+<ul id="productList">
+  {{#each products}}
+    <li>{{this.name}} - {{this.price}}</li>
+  {{/each}}
+</ul>
+
+<form id="productForm">
+  <input type="text" name="name" placeholder="Nombre del producto">
+  <input type="number" name="price" placeholder="Precio">
+  <button type="submit">Agregar Producto</button>
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io.connect('http://localhost:8080');
+
+  // Escuchar el evento 'updateProducts' y actualizar la lista de productos
+  socket.on('updateProducts', (products) => {
+      const productList = document.getElementById('productList');
+      productList.innerHTML = ''; // Limpiar la lista actual
+      products.forEach(product => {
+          const productItem = document.createElement('li');
+          productItem.textContent = `${product.name} - ${product.price}`;
+          productList.appendChild(productItem);
+      });
+  });
+
+  // Producto agregado
+  socket.on('productAdded', (product) => {
+      const productList = document.getElementById('productList');
+      const productItem = document.createElement('li');
+      productItem.textContent = `${product.name} - ${product.price}`;
+      productList.appendChild(productItem);
+  });
+
+  // Producto eliminado
+  socket.on('productDeleted', (productId) => {
+      const productElement = document.getElementById(`product-${productId}`);
+      if (productElement) {
+          productElement.remove();
+      }
+  });
+
+  // Desconexión del servidor
+  socket.on('disconnect', () => {
+      console.log('Desconectado del servidor');
+  });
+
+  // Mensaje del servidor
+  socket.on('serverMessage', (message) => {
+      console.log('Mensaje del servidor:', message);
+  });
+
+  // Enviar un nuevo producto al servidor cuando se envíe el formulario
+  document.getElementById('productForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = e.target.elements.name.value;
+      const price = parseFloat(e.target.elements.price.value);
+      if (name && !isNaN(price)) {
+          socket.emit('newProduct', { name, price });
+          e.target.elements.name.value = '';
+          e.target.elements.price.value = '';
+      } else {
+          alert('Por favor, ingrese un nombre y un precio válido.');
+      }
+  });
+</script>
